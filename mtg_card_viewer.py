@@ -1,6 +1,8 @@
-import tkinter as tk
+import sys
+from PyQt5.QtWidgets import QApplication, QMainWindow, QLabel, QVBoxLayout, QWidget, QLineEdit, QPushButton
+from PyQt5.QtGui import QPixmap
+from PyQt5.QtCore import Qt
 from mtgsdk import Card
-from PIL import Image, ImageTk
 import requests
 from urllib3.exceptions import InsecureRequestWarning
 
@@ -9,62 +11,61 @@ from urllib3.exceptions import InsecureRequestWarning
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
 
-class MagicCardViewer:
-    def __init__(self, master):
-        self.master = master
-        self.master.title("Magic Card Viewer")
+class MagicCardViewer(QMainWindow):
+    def __init__(self):
+        super().__init__()
 
-        self.card_images = []
+        self.setGeometry(100, 100, 600, 400)
+        self.setWindowTitle('Magic Card Viewer')
 
-        # Crée une entrée pour chaque carte dans la main du joueur
-        self.card_entries = []
-        for i in range(2):
-            label = tk.Label(master, text=f"Carte {i+1}:")
-            label.grid(row=i, column=0, padx=5, pady=5, sticky="e")
+        # Widgets
+        self.label = QLabel('Nom de la carte:', self)
+        self.card_entry = QLineEdit(self)
+        self.result_label = QLabel(self)
+        self.image_label = QLabel(self)
+        self.image_label.setAlignment(Qt.AlignCenter)
 
-            entry = tk.Entry(master)
-            entry.grid(row=i, column=1, padx=5, pady=5, sticky="w")
-            self.card_entries.append(entry)
+        self.search_button = QPushButton('Rechercher la carte', self)
+        self.search_button.clicked.connect(self.show_card_info)
 
-        # Bouton pour afficher les images des cartes
-        btn_show_images = tk.Button(master, text="Afficher les images", command=self.show_card_images)
-        btn_show_images.grid(row=7, column=0, columnspan=2, pady=10)
+        # Layout
+        layout = QVBoxLayout()
+        layout.addWidget(self.label)
+        layout.addWidget(self.card_entry)
+        layout.addWidget(self.search_button)
+        layout.addWidget(self.result_label)
+        layout.addWidget(self.image_label)
 
-    def get_card_id(self, card_name):
-        # Recherche de la carte par nom
-        cards = Card.where(name=card_name).all()
+        container = QWidget()
+        container.setLayout(layout)
+        self.setCentralWidget(container)
 
-        # Renvoie l'ID de la première carte trouvée ou None si aucune carte n'est trouvée
-        return cards[0].multiverse_id if cards else None
+    def show_card_info(self):
+        card_name = self.card_entry.text()
 
-    def load_card_images(self, card_names):
-        self.card_images = []
-        for card_name in card_names:
-            card_id = self.get_card_id(card_name)
-            if card_id:
-                card_image_url = f"http://gatherer.wizards.com/Handlers/Image.ashx?multiverseid={card_id}&type=card"
-                print(card_image_url)
-                image = Image.open(requests.get(card_image_url, stream=True, verify=False).raw)
-                image = ImageTk.PhotoImage(image)
-                self.card_images.append(image)
-            else:
-                # Ajoute une image de remplacement si la carte n'est pas trouvée
-                image = Image.open("placeholder_image.png")  # Remplacez par le chemin de votre image de remplacement
-                image = ImageTk.PhotoImage(image)
-                self.card_images.append(image)
+        try:
+            # Rechercher la carte par nom
+            card = Card.where(name=card_name).all()[0]
 
-    def show_card_images(self):
-        card_names = [entry.get() for entry in self.card_entries]
-        self.load_card_images(card_names)
+            # Afficher les informations de la carte
+            info_text = (f"Nom: {card.name}\n"
+                         f"Type: {card.type}\n"
+                         f"Rareté: {card.rarity}\n"
+                         f"Cout de mana: {card.mana_cost}")
+            self.result_label.setText(info_text)
 
-        # Crée une nouvelle fenêtre pour afficher les images
-        image_window = tk.Toplevel(self.master)
-        for i, card_image in enumerate(self.card_images):
-            label = tk.Label(image_window, image=card_image)
-            label.grid(row=i // 4, column=i % 4, padx=5, pady=5)
+            # Charger et afficher l'image de la carte
+            image_url = card.image_url
+            pixmap = QPixmap()
+            pixmap.loadFromData(requests.get(image_url, stream=True, verify=False).content)
+            self.image_label.setPixmap(pixmap)
+        except IndexError:
+            self.result_label.setText(f"Carte introuvable : {card_name}")
+            self.image_label.clear()
 
 
-if __name__ == "__main__":
-    root = tk.Tk()
-    app = MagicCardViewer(root)
-    root.mainloop()
+if __name__ == '__main__':
+    app = QApplication(sys.argv)
+    viewer = MagicCardViewer()
+    viewer.show()
+    sys.exit(app.exec_())
