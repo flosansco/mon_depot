@@ -1,7 +1,8 @@
-import sys
 from PyQt5.QtWidgets import QApplication, QMainWindow, QLabel, QVBoxLayout, QWidget, QLineEdit, QPushButton
-from PyQt5.QtGui import QPixmap
+from PyQt5.QtGui import QPixmap, QIcon
 from PyQt5.QtCore import Qt
+import sys
+
 from mtgsdk import Card
 import requests
 from urllib3.exceptions import InsecureRequestWarning
@@ -41,6 +42,11 @@ class MagicCardViewer(QMainWindow):
         self.setCentralWidget(container)
 
     def show_card_info(self):
+        """
+        Display the card searched from the search bare
+
+        :return:
+        """
         card_name = self.card_entry.text()
 
         try:
@@ -51,7 +57,8 @@ class MagicCardViewer(QMainWindow):
             info_text = (f"Nom: {card.name}\n"
                          f"Type: {card.type}\n"
                          f"Rareté: {card.rarity}\n"
-                         f"Cout de mana: {card.mana_cost}")
+                         f"Cout de mana: {card.mana_cost}\n"
+                         f"Texte: {card.text}")
             self.result_label.setText(info_text)
 
             # Charger et afficher l'image de la carte
