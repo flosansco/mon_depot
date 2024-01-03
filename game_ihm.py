@@ -1,5 +1,5 @@
 from PyQt5.QtWidgets import QApplication, QMainWindow, QLabel, QVBoxLayout, QWidget, QLineEdit, QPushButton
-from PyQt5.QtGui import QPixmap
+from PyQt5.QtGui import QPixmap, QIcon
 from PyQt5.QtCore import Qt
 import sys
 
@@ -41,9 +41,6 @@ class MagicCardViewer(QMainWindow):
         container.setLayout(layout)
         self.setCentralWidget(container)
 
-        # Test
-        self.card_entry.setText("Jirina Kudro")
-
     def show_card_info(self):
         """
         Display the card searched from the search bare
@@ -51,32 +48,26 @@ class MagicCardViewer(QMainWindow):
         :return:
         """
         card_name = self.card_entry.text()
-        self.card_entry.setText("Jirina Kudro")
 
         try:
             # Rechercher la carte par nom
-            # card = Card.where(name=card_name).all()[0]
-
-            scryfall_api_url = f"https://api.scryfall.com/cards/named?exact={card_name}"
-            response = requests.get(scryfall_api_url)
-            card = response.json()  # type: dict
-            # pprint.pprint(card)
+            card = Card.where(name=card_name).all()[0]
 
             # Afficher les informations de la carte
-            info_text = (f"Nom: {card.get("name")}\n"
-                         f"Type: {card.get("type_line")}\n"
-                         f"Rareté: {card.get("rarity")}\n"
-                         f"Cout de mana: {card.get("mana_cost")}\n"
-                         f"Texte: {card.get("text")}")
+            info_text = (f"Nom: {card.name}\n"
+                         f"Type: {card.type}\n"
+                         f"Rareté: {card.rarity}\n"
+                         f"Cout de mana: {card.mana_cost}\n"
+                         f"Texte: {card.text}")
             self.result_label.setText(info_text)
 
             # Charger et afficher l'image de la carte
-            image_url = card.get("image_uris").get("normal")
+            image_url = card.image_url
             pixmap = QPixmap()
             pixmap.loadFromData(requests.get(image_url, stream=True, verify=False).content)
             self.image_label.setPixmap(pixmap)
-        except Exception as e:
-            self.result_label.setText(f"Carte introuvable : {card_name}, error : {e}")
+        except IndexError:
+            self.result_label.setText(f"Carte introuvable : {card_name}")
             self.image_label.clear()
 
 
