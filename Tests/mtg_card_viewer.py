@@ -1,6 +1,9 @@
-from PyQt5.QtWidgets import QApplication, QMainWindow, QLabel, QVBoxLayout, QWidget, QLineEdit, QPushButton
+import json
+import pprint
+
+from PyQt5.QtWidgets import QApplication, QMainWindow, QLabel, QVBoxLayout, QWidget, QLineEdit, QPushButton, QCompleter
 from PyQt5.QtGui import QPixmap
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QStringListModel
 import sys
 
 from mtgsdk import Card
@@ -16,18 +19,21 @@ class MagicCardViewer(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        self.setGeometry(100, 100, 600, 400)
+        self.names = []
+
+        self.setGeometry(100, 100, 700, 600)
         self.setWindowTitle('Magic Card Viewer')
 
         # Widgets
         self.label = QLabel('Nom de la carte:', self)
         self.card_entry = QLineEdit(self)
         self.result_label = QLabel(self)
+        self.result_label.setWordWrap(True)
         self.image_label = QLabel(self)
         self.image_label.setAlignment(Qt.AlignCenter)
 
         self.search_button = QPushButton('Rechercher la carte', self)
-        self.search_button.clicked.connect(self.show_card_info)
+        self.search_button.clicked.connect(self.show_card_info)  # ya un warning mais osef
 
         # Layout
         layout = QVBoxLayout()
@@ -44,30 +50,46 @@ class MagicCardViewer(QMainWindow):
         # Test
         self.card_entry.setText("Jirina Kudro")
 
+        self.charger_les_suggestions()
+
+        # TODO check la version du fichier je pense ça doit pouvoir se faire de lire un site web ? je pense meme
+        # que je peux l'automatiser
+
+    def charger_les_suggestions(self):
+        """
+        Charge les suggestions à partir d'un fichier contenant une liste de tous les noms des cartes existantes
+        :return:
+        """
+        with open("all_cards_name.json", "r", encoding="utf-8") as fichier:
+            self.names = json.load(fichier)
+
+        completer_model = QStringListModel(self.names, self)
+        completer = QCompleter(completer_model, self)
+        completer.setCaseSensitivity(Qt.CaseInsensitive)
+        self.card_entry.setCompleter(completer)
+
     def show_card_info(self):
         """
         Display the card searched from the search bare
-
-        :return:
         """
         card_name = self.card_entry.text()
         self.card_entry.setText("Jirina Kudro")
 
         try:
-            # Rechercher la carte par nom
-            # card = Card.where(name=card_name).all()[0]
 
             scryfall_api_url = f"https://api.scryfall.com/cards/named?exact={card_name}"
             response = requests.get(scryfall_api_url)
             card = response.json()  # type: dict
             # pprint.pprint(card)
 
+            # il semble que sur les carte récentes la clé soit oracle_text au lieu de text, c'est très énervant
+            text = card.get("text") if card.get("text") is not None else card.get("oracle_text")
             # Afficher les informations de la carte
             info_text = (f"Nom: {card.get("name")}\n"
                          f"Type: {card.get("type_line")}\n"
                          f"Rareté: {card.get("rarity")}\n"
                          f"Cout de mana: {card.get("mana_cost")}\n"
-                         f"Texte: {card.get("text")}")
+                         f"Texte: {text}")
             self.result_label.setText(info_text)
 
             # Charger et afficher l'image de la carte
