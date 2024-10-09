@@ -1,3 +1,4 @@
+import os.path
 import pprint
 import sqlite3
 import json
@@ -50,21 +51,25 @@ def ajouter_donnees_depuis_json(nom_fichier):
     conn = sqlite3.connect('ma_base_de_donnees_0710.db')
     cursor = conn.cursor()
 
-    with open(nom_fichier, 'r', encoding='utf-8') as fichier_json:
-        print("Loading json, might take a while ...")
-        donnees = json.load(fichier_json)
-        print("Json loading finished")
+    if os.path.isfile(nom_fichier):
 
-        for dico in donnees:
-            try:
-                name = dico["name"]
-                mana_cost = dico["mana_cost"]
-                type_line = dico["type_line"]
-                cursor.execute("INSERT OR IGNORE INTO cartes (name, mana, type) VALUES (?, ?, ?)",
-                               (name, mana_cost, type_line))
+        with open(nom_fichier, 'r', encoding='utf-8') as fichier_json:
+            print("Loading json, might take a while ...")
+            donnees = json.load(fichier_json)
+            print("Json loading finished")
 
-            except KeyError:
-                print("{} : Unknown mana or type".format(name))
+            for dico in donnees:
+                try:
+                    name = dico["name"]
+                    mana_cost = dico["mana_cost"]
+                    type_line = dico["type_line"]
+                    cursor.execute("INSERT OR IGNORE INTO cartes (name, mana, type) VALUES (?, ?, ?)",
+                                   (name, mana_cost, type_line))
+
+                except KeyError:
+                    print("{} : Unknown mana or type".format(name))
+    else:
+        print("File {} does not exists".format(nom_fichier))
 
     conn.commit()
     conn.close()
@@ -92,7 +97,6 @@ def lire_bdd():
     conn.close()
 
 
-creer_base_de_donnees()
 # json_file = input("Taper le nom du fichier json à ajouter dans la BDD : ")
-json_file = "ALL_CARDS_BDD_10072024.json"
+json_file = "../JsonRessources/ALL_CARDS_BDD_10072024.json"
 ajouter_donnees_depuis_json(json_file)
