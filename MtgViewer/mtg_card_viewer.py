@@ -21,7 +21,7 @@ class MagicCardViewer(QMainWindow):
 
         self.names = []
 
-        self.setGeometry(100, 100, 700, 600)
+        self.setGeometry(500, 500, 700, 1100)
         self.setWindowTitle('Magic Card Viewer')
 
         # Widgets
@@ -60,7 +60,7 @@ class MagicCardViewer(QMainWindow):
         Charge les suggestions à partir d'un fichier contenant une liste de tous les noms des cartes existantes
         :return:
         """
-        with open("../JsonRessources/all_cards_name.json", "r", encoding="utf-8") as fichier:
+        with open("../JsonRessources/all_cards_names.json", "r", encoding="utf-8") as fichier:
             self.names = json.load(fichier)
 
         completer_model = QStringListModel(self.names, self)
@@ -73,7 +73,7 @@ class MagicCardViewer(QMainWindow):
         Display the card searched from the search bare
         """
         card_name = self.card_entry.text()
-        self.card_entry.setText("Jirina Kudro")
+        # self.card_entry.setText("Jirina Kudro")
 
         try:
 
