@@ -1,15 +1,33 @@
 import os.path
-import pprint
 import sqlite3
 import json
-
-import requests
+import ijson
+import logging
+import pprint
 from mtgsdk import Card
+from LogManager.log_manager import CustomFormatter
+
+# Set up the root logger
+logger = logging.getLogger()
+logger.setLevel(logging.DEBUG)
+
+# Create console handler
+ch = logging.StreamHandler()
+ch.setLevel(logging.DEBUG)
+
+# Apply the custom formatter to the handler
+ch.setFormatter(CustomFormatter())
+
+# Add the handler to the logger
+logger.addHandler(ch)
 
 
-# Fonction pour créer la base de données et la table
 def creer_base_de_donnees():
-    conn = sqlite3.connect('ma_base_de_donnees_0710.db')
+    """
+    Crée la base de donnée
+    :return:
+    """
+    conn = sqlite3.connect('../BDDs/ma_base_de_donnees_0710.db')
     cursor = conn.cursor()
 
     # Création de la table "cartes"
@@ -25,9 +43,10 @@ def creer_base_de_donnees():
     conn.close()
 
 
-def generer_json():
+def _test_generer_json():
     """
     Fonction test pour générer un json
+
     :return:
     """
     dico = {}
@@ -37,10 +56,8 @@ def generer_json():
 
     with open("card.json", 'w') as fichier_json:
         json.dump(dico, fichier_json, indent=2)
-    # pprint.pprint(dico)
 
 
-# Fonction pour ajouter des données depuis un fichier JSON
 def ajouter_donnees_depuis_json(nom_fichier):
     """
     Charge le fichier json et charge ses données dans une BDD
@@ -48,14 +65,14 @@ def ajouter_donnees_depuis_json(nom_fichier):
     :param nom_fichier:
     :return:
     """
-    conn = sqlite3.connect('ma_base_de_donnees_0710.db')
+    conn = sqlite3.connect('../BDDs/ma_base_de_donnees_0710.db')
     cursor = conn.cursor()
 
     if os.path.isfile(nom_fichier):
 
         with open(nom_fichier, 'r', encoding='utf-8') as fichier_json:
             print("Loading json, might take a while ...")
-            donnees = json.load(fichier_json)
+            donnees = ijson.items(fichier_json, 'item')
             print("Json loading finished")
 
             for dico in donnees:
@@ -63,21 +80,25 @@ def ajouter_donnees_depuis_json(nom_fichier):
                     name = dico["name"]
                     mana_cost = dico["mana_cost"]
                     type_line = dico["type_line"]
-                    cursor.execute("INSERT OR IGNORE INTO cartes (name, mana, type) VALUES (?, ?, ?)",
+                    cursor.execute("INSERT OR REPLACE INTO cartes (name, mana, type) VALUES (?, ?, ?)",
                                    (name, mana_cost, type_line))
 
-                except KeyError:
-                    print("{} : Unknown mana or type".format(name))
+                except KeyError as k:
+                    for item in k.args:
+                        if 'mana' in item:
+                            logger.error(item)
+                            logger.error(dico)
+                    logger.error("{} : Unknown mana".format(name))
     else:
-        print("File {} does not exists".format(nom_fichier))
+        logger.error("File {} does not exists".format(nom_fichier))
 
     conn.commit()
     conn.close()
 
 
-def lire_bdd():
+def lire_bdd(bdd_path):
     # Chemin de la base de données SQLite
-    chemin_base_de_donnees = "ma_base_de_donnees_0710.db"
+    chemin_base_de_donnees = bdd_path
 
     # Connexion à la base de données
     conn = sqlite3.connect(chemin_base_de_donnees)
@@ -98,5 +119,7 @@ def lire_bdd():
 
 
 # json_file = input("Taper le nom du fichier json à ajouter dans la BDD : ")
+# json_file = "../JsonRessources/ALL_CARDS_BDD_10072024.json"
 json_file = "../JsonRessources/ALL_CARDS_BDD_10072024.json"
-ajouter_donnees_depuis_json(json_file)
+# ajouter_donnees_depuis_json(json_file)
+# lire_bdd("../BDDs/ma_base_de_donnees_0710.db")
